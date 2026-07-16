@@ -19,6 +19,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MerchantsService } from '../merchants/merchants.service';
 import { NotificationType } from '../database/entities/notification.entity';
+import * as admin from 'firebase-admin';
 
 @Injectable()
 export class AuthService {
@@ -321,6 +322,7 @@ export class AuthService {
   }
 
   // ── Google OAuth ──────────────────────────────
+  // ── Google OAuth ──────────────────────────────
   async googleLogin(profile: {
     id: string; email: string; firstName: string;
     lastName: string; avatarUrl?: string;
@@ -331,7 +333,10 @@ export class AuthService {
 
     if (!user) {
       user = this.usersRepo.create({
-        ...profile,
+        email: profile.email,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        avatarUrl: profile.avatarUrl,
         provider: AuthProvider.GOOGLE,
         providerId: profile.id,
         role: UserRole.CUSTOMER,
@@ -396,5 +401,36 @@ export class AuthService {
   private sanitizeUser(user: User) {
     const { passwordHash, refreshTokenHash, ...safe } = user as any;
     return safe;
+  }
+
+
+  // ── Firebase Google Login ─────────────────────
+  async loginWithGoogleFirebase(idToken: string) {
+    let decodedToken: admin.auth.DecodedIdToken;
+
+    try {
+      decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      this.logger.warn(`Firebase token verification failed: ${err instanceof Error ? err.message : err}`);
+      throw new UnauthorizedException('Invalid or expired Google token');
+    }
+
+    const { uid, email, name, picture } = decodedToken;
+
+    if (!email) {
+      throw new BadRequestException('Google account has no email associated with it');
+    }
+
+    const [firstName, ...rest] = (name ?? '').trim().split(' ').filter(Boolean);
+
+    // Reuses your existing googleLogin logic: finds-or-creates the user,
+    // marks them verified, and issues your app's own access/refresh tokens.
+    return this.googleLogin({
+      id: uid,
+      email,
+      firstName: firstName || 'Google',
+      lastName: rest.join(' ') || 'User',
+      avatarUrl: picture,
+    });
   }
 }

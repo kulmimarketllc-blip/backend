@@ -20,13 +20,14 @@ import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { User } from '../database/entities/user.entity';
+import { GoogleLoginDto } from './dto/google-login.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
-  // ── POST /auth/register ──────────────────────
+  // ── POST /auth/register
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new user account' })
@@ -64,6 +65,31 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return { accessToken: result.accessToken, user: result.user };
+  }
+
+
+
+  // ── POST /auth/google (Firebase) ─────────────
+  @Public()
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login/Register via Firebase Google ID token' })
+  @ApiResponse({ status: 200, description: 'Returns access token + user' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired Google token' })
+  async googleFirebaseLogin(
+    @Body() dto: GoogleLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.loginWithGoogleFirebase(dto.idToken);
+
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return { accessToken: result.accessToken, user: result.user };
