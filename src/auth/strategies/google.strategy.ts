@@ -1,1 +1,0 @@
-export { GoogleStrategy } from './local.strategy';
