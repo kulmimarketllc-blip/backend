@@ -1,0 +1,24 @@
+ESUUQ Developer Package
+=======================
+
+WHAT IS IN THIS FOLDER:
+------------------------
+
+1. esuuq-developer-handoff.docx
+   → Read this first. It explains everything.
+
+2. screens/ folder (8 files)
+   → These are all the app screens (what users see).
+   → esuuq.html          = Customer store
+   → esuuq-cart.html     = Checkout
+   → esuuq-account.html  = Login & account
+   → esuuq-merchant.html = Merchant dashboard
+   → esuuq-admin.html    = Admin panel
+   → esuuq-delivery.html = Driver app
+   → esuuq-api.html      = API documentation
+   → esuuq-platform.html = All screens in one hub
+
+3. backend/ folder
+   → esuuq-api-complete.tar.gz = All backend code (84 files)
+   → To unpack: double-click on Mac, or run: tar -xzf esuuq-api-complete.tar.gz
+

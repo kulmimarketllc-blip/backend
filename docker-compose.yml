@@ -1,0 +1,72 @@
+# ─────────────────────────────────────────────────
+# docker-compose.yml — ESUUQ local dev environment
+# ─────────────────────────────────────────────────
+version: '3.9'
+
+services:
+  # ── PostgreSQL ──
+  postgres:
+    image: postgres:15-alpine
+    container_name: esuuq-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: esuuq_db
+      POSTGRES_USER: esuuq_user
+      POSTGRES_PASSWORD: esuuq_dev_password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U esuuq_user -d esuuq_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ──
+  redis:
+    image: redis:7-alpine
+    container_name: esuuq-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis Commander (UI) ──
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: esuuq-redis-ui
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - '8081:8081'
+    depends_on: [redis]
+
+  # ── API (production image) ──
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: esuuq-api
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    env_file: .env
+    environment:
+      DATABASE_HOST: postgres
+      REDIS_HOST: redis
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    volumes:
+      - ./src:/app/src   # hot reload in dev
+
+volumes:
+  postgres_data:
+  redis_data:
