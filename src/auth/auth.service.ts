@@ -13,7 +13,6 @@ import * as bcrypt from 'bcrypt';
 
 import { User, UserRole, AuthProvider } from '../database/entities/user.entity';
 import { RegisterDto, RegisterMerchantUserDto } from './dto/index';
-import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { NotificationsService } from '../notifications/notifications.service';
