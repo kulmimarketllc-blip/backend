@@ -1,0 +1,98 @@
+import { SupportService } from './support.service';
+import { User } from '../database/entities/user.entity';
+import { ListSupportTicketsDto } from './dto/list-support-tickets.dto';
+import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
+import { CreateTicketReplyDto } from './dto/create-ticket-reply.dto';
+import { CreateSupportTicketDto } from './dto/create-ticket.dto';
+import { AssignTicketDto } from './dto/assign-ticket.dto';
+export declare class SupportController {
+    private readonly supportService;
+    constructor(supportService: SupportService);
+    create(dto: CreateSupportTicketDto, user: User): Promise<import("../database/entities/support-ticket.entity").SupportTicket>;
+    list(query: ListSupportTicketsDto, user: User): Promise<{
+        data: import("../database/entities/support-ticket.entity").SupportTicket[];
+        meta: {
+            total: number;
+            page: number;
+            limit: number;
+            pages: number;
+        };
+    }>;
+    getCounts(user: User): Promise<{
+        total: number;
+        open: number;
+        inProgress: number;
+        resolved: number;
+        closed: number;
+    }>;
+    getById(id: string, user: User): Promise<{
+        replies: import("../database/entities/support-ticket.entity").SupportTicketReply[];
+        ticketNo: string;
+        customerId: string;
+        assignedToId?: string;
+        orderId?: string;
+        subject: string;
+        description: string;
+        category: import("../database/entities/support-ticket.entity").SupportTicketCategory;
+        priority: import("../database/entities/support-ticket.entity").SupportTicketPriority;
+        status: import("../database/entities/support-ticket.entity").SupportTicketStatus;
+        metadata?: Record<string, any>;
+        resolvedAt?: Date;
+        closedAt?: Date;
+        lastReplyAt?: Date;
+        lastReplyById?: string;
+        customer: User;
+        assignedTo?: User;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt?: Date;
+    }>;
+    updateStatus(id: string, dto: UpdateTicketStatusDto, user: User): Promise<{
+        replies: import("../database/entities/support-ticket.entity").SupportTicketReply[];
+        ticketNo: string;
+        customerId: string;
+        assignedToId?: string;
+        orderId?: string;
+        subject: string;
+        description: string;
+        category: import("../database/entities/support-ticket.entity").SupportTicketCategory;
+        priority: import("../database/entities/support-ticket.entity").SupportTicketPriority;
+        status: import("../database/entities/support-ticket.entity").SupportTicketStatus;
+        metadata?: Record<string, any>;
+        resolvedAt?: Date;
+        closedAt?: Date;
+        lastReplyAt?: Date;
+        lastReplyById?: string;
+        customer: User;
+        assignedTo?: User;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt?: Date;
+    }>;
+    addReply(id: string, dto: CreateTicketReplyDto, user: User): Promise<import("../database/entities/support-ticket.entity").SupportTicketReply>;
+    assign(id: string, dto: AssignTicketDto, user: User): Promise<{
+        replies: import("../database/entities/support-ticket.entity").SupportTicketReply[];
+        ticketNo: string;
+        customerId: string;
+        assignedToId?: string;
+        orderId?: string;
+        subject: string;
+        description: string;
+        category: import("../database/entities/support-ticket.entity").SupportTicketCategory;
+        priority: import("../database/entities/support-ticket.entity").SupportTicketPriority;
+        status: import("../database/entities/support-ticket.entity").SupportTicketStatus;
+        metadata?: Record<string, any>;
+        resolvedAt?: Date;
+        closedAt?: Date;
+        lastReplyAt?: Date;
+        lastReplyById?: string;
+        customer: User;
+        assignedTo?: User;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt?: Date;
+    }>;
+}

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
-import { IsString, IsOptional, MinLength, MaxLength, IsBoolean, IsEnum } from 'class-validator';
+import { IsString, IsOptional, MinLength, MaxLength, IsBoolean, IsEnum, IsEmail } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ConfigService } from '@nestjs/config';
@@ -18,9 +18,10 @@ import { User, UserRole } from '../database/entities/user.entity';
 import { AddressType } from '../database/entities/supporting.entities';
 import { fileUrl, multerOptions } from '../uploads/multer.config';
 
-class UpdateProfileDto {
+export class UpdateProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80) firstName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80) lastName?: string;
+  @ApiPropertyOptional() @IsOptional() @IsEmail() email?: string;  // ← add this
   @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() avatarUrl?: string;
 }
@@ -98,12 +99,9 @@ export class UsersController {
       properties: {
         firstName: { type: 'string' },
         lastName: { type: 'string' },
+        email: { type: 'string', format: 'email' },
         phone: { type: 'string' },
-        avatar: {
-          type: 'string',
-          format: 'binary',
-          description: 'Avatar image file (optional)',
-        },
+        avatar: { type: 'string', format: 'binary' },
       },
     },
   })

@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { User, UserRole, AuthProvider } from '../database/entities/user.entity';
 import { Address, Wishlist } from '../database/entities/supporting.entities';
 import { Product } from '../database/entities/product.entity';
+import { UpdateProfileDto } from './users.controller';
 
 @Injectable()
 export class UsersService {
@@ -96,14 +97,28 @@ export class UsersService {
     return { success: true };
   }
 
-  async updateProfile(id: string, dto: Partial<Pick<User, 'firstName' | 'lastName' | 'phone' | 'avatarUrl'>>): Promise<User> {
-    const user = await this.findById(id);
-    if (dto.phone && dto.phone !== user.phone) {
-      const taken = await this.usersRepo.findOne({ where: { phone: dto.phone } });
-      if (taken) throw new ConflictException('Phone number already in use');
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    // Email change
+    if (dto.email && dto.email !== user.email) {
+      const existing = await this.usersRepo.findOne({ where: { email: dto.email } });
+      if (existing) {
+        throw new ConflictException('Email is already in use');
+      }
+
+      user.email = dto.email.toLowerCase().trim();
+      user.isVerified = false; // optional but recommended — force re-verification
     }
-    await this.usersRepo.update(id, dto);
-    return this.findById(id);
+
+    if (dto.firstName !== undefined) user.firstName = dto.firstName;
+    if (dto.lastName !== undefined) user.lastName = dto.lastName;
+    if (dto.phone !== undefined) user.phone = dto.phone;
+    if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
+
+    return this.usersRepo.save(user);
   }
 
   async changePassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
