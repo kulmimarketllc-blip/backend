@@ -21,9 +21,21 @@ import { fileUrl, multerOptions } from '../uploads/multer.config';
 export class UpdateProfileDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80) firstName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80) lastName?: string;
-  @ApiPropertyOptional() @IsOptional() @IsEmail() email?: string;  // ← add this
+  @ApiPropertyOptional() @IsOptional() @IsEmail() email?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() avatarUrl?: string;
+
+  // Password update (optional)
+  @ApiPropertyOptional({ description: 'Required when changing password' })
+  @IsOptional()
+  @IsString()
+  currentPassword?: string;
+
+  @ApiPropertyOptional({ description: 'New password (min 8 chars)' })
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  newPassword?: string;
 }
 
 class ChangePasswordDto {
@@ -89,6 +101,10 @@ export class UsersController {
   @ApiOperation({ summary: 'Get own profile' })
   getMe(@CurrentUser() user: User) { return this.usersService.findById(user.id); }
 
+
+
+
+
   // Modified: Supports both JSON and file upload for avatar
   @Put('me')
   @ApiOperation({ summary: 'Update profile' })
@@ -101,27 +117,22 @@ export class UsersController {
         lastName: { type: 'string' },
         email: { type: 'string', format: 'email' },
         phone: { type: 'string' },
+        currentPassword: { type: 'string' },
+        newPassword: { type: 'string', minLength: 8 },
         avatar: { type: 'string', format: 'binary' },
       },
     },
   })
+
   @UseInterceptors(FileInterceptor('avatar', multerOptions('avatars')))
   async updateMe(
     @CurrentUser() user: User,
     @Body() dto: UpdateProfileDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    // If file is uploaded, process it
     if (file) {
       const baseUrl = this.config.get<string>('APP_URL', 'http://localhost:3000/v1');
-      const avatarUrl = fileUrl(baseUrl, 'avatars', file.filename);
-      dto.avatarUrl = avatarUrl;
-    }
-
-    // Remove avatar from body if it was sent as string (to avoid confusion)
-    if (dto.avatarUrl && typeof dto.avatarUrl === 'string' && !file) {
-      // Keep the existing avatarUrl if provided in JSON
-      // This allows updating avatarUrl directly via JSON
+      dto.avatarUrl = fileUrl(baseUrl, 'avatars', file.filename);
     }
 
     return this.usersService.updateProfile(user.id, dto);

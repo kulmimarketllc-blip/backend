@@ -62,6 +62,19 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateProfileDto.prototype, "avatarUrl", void 0);
+__decorate([
+    (0, swagger_2.ApiPropertyOptional)({ description: 'Required when changing password' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateProfileDto.prototype, "currentPassword", void 0);
+__decorate([
+    (0, swagger_2.ApiPropertyOptional)({ description: 'New password (min 8 chars)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MinLength)(8),
+    __metadata("design:type", String)
+], UpdateProfileDto.prototype, "newPassword", void 0);
 class ChangePasswordDto {
 }
 __decorate([
@@ -186,10 +199,7 @@ let UsersController = class UsersController {
     async updateMe(user, dto, file) {
         if (file) {
             const baseUrl = this.config.get('APP_URL', 'http://localhost:3000/v1');
-            const avatarUrl = (0, multer_config_1.fileUrl)(baseUrl, 'avatars', file.filename);
-            dto.avatarUrl = avatarUrl;
-        }
-        if (dto.avatarUrl && typeof dto.avatarUrl === 'string' && !file) {
+            dto.avatarUrl = (0, multer_config_1.fileUrl)(baseUrl, 'avatars', file.filename);
         }
         return this.usersService.updateProfile(user.id, dto);
     }
@@ -261,6 +271,8 @@ __decorate([
                 lastName: { type: 'string' },
                 email: { type: 'string', format: 'email' },
                 phone: { type: 'string' },
+                currentPassword: { type: 'string' },
+                newPassword: { type: 'string', minLength: 8 },
                 avatar: { type: 'string', format: 'binary' },
             },
         },

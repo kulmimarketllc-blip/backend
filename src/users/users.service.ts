@@ -99,26 +99,91 @@ export class UsersService {
 
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    const user = await this.usersRepo.findOne({
+      where: { id: userId },
+      select: [
+        'id', 'firstName', 'lastName', 'email', 'phone',
+        'avatarUrl', 'passwordHash', 'provider', 'isVerified',
+      ],
+    });
+
     if (!user) throw new NotFoundException('User not found');
 
-    // Email change
-    if (dto.email && dto.email !== user.email) {
-      const existing = await this.usersRepo.findOne({ where: { email: dto.email } });
-      if (existing) {
-        throw new ConflictException('Email is already in use');
-      }
+    // ── Email change ──
+    if (dto.email !== undefined) {
+      const normalizedEmail = dto.email.toLowerCase().trim();
 
-      user.email = dto.email.toLowerCase().trim();
-      user.isVerified = false; // optional but recommended — force re-verification
+      if (normalizedEmail !== user.email) {
+        const existing = await this.usersRepo.findOne({
+          where: { email: normalizedEmail },
+        });
+
+        if (existing && existing.id !== userId) {
+          throw new ConflictException('Email is already in use');
+        }
+
+        user.email = normalizedEmail;
+        user.isVerified = false; // force re-verification
+      }
     }
 
-    if (dto.firstName !== undefined) user.firstName = dto.firstName;
-    if (dto.lastName !== undefined) user.lastName = dto.lastName;
-    if (dto.phone !== undefined) user.phone = dto.phone;
+    // ── Phone change ──
+    if (dto.phone !== undefined) {
+      const normalizedPhone = dto.phone.trim();
+
+      if (normalizedPhone && normalizedPhone !== user.phone) {
+        const existing = await this.usersRepo.findOne({
+          where: { phone: normalizedPhone },
+        });
+
+        if (existing && existing.id !== userId) {
+          throw new ConflictException('Phone number is already in use');
+        }
+
+        user.phone = normalizedPhone;
+      } else if (!normalizedPhone) {
+        user.phone = null as any;
+      }
+    }
+
+    // ── Basic profile fields ──
+    if (dto.firstName !== undefined) user.firstName = dto.firstName.trim();
+    if (dto.lastName !== undefined) user.lastName = dto.lastName.trim();
     if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
 
-    return this.usersRepo.save(user);
+    // ── Password change ──
+    const wantsPasswordChange = dto.currentPassword || dto.newPassword;
+
+    if (wantsPasswordChange) {
+      if (user.provider !== AuthProvider.LOCAL) {
+        throw new BadRequestException('Cannot change password on social login accounts');
+      }
+
+      if (!dto.currentPassword || !dto.newPassword) {
+        throw new BadRequestException('Both currentPassword and newPassword are required');
+      }
+
+      if (!user.passwordHash) {
+        throw new BadRequestException('Password validation is unavailable for this account');
+      }
+
+      const valid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+      if (!valid) {
+        throw new BadRequestException('Current password is incorrect');
+      }
+
+      if (dto.currentPassword === dto.newPassword) {
+        throw new BadRequestException('New password must differ from current password');
+      }
+
+      user.passwordHash = await bcrypt.hash(dto.newPassword, 12);
+      this.logger.log(`Password changed via profile update: ${userId}`);
+    }
+
+    const saved = await this.usersRepo.save(user);
+
+    // Return safe user object (no passwordHash)
+    return this.findById(saved.id);
   }
 
   async changePassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
