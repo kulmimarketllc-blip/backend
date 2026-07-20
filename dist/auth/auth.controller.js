@@ -67,8 +67,8 @@ let AuthController = class AuthController {
         });
         return { accessToken: result.accessToken, verified: result.verified, user: result.user };
     }
-    async resendOtp(userId) {
-        return this.authService.resendOtp(userId);
+    async resendOtp(dto) {
+        return this.authService.resendOtpByEmail(dto.email);
     }
     async forgotPassword(dto) {
         return this.authService.requestPasswordReset(dto.email);
@@ -184,12 +184,14 @@ __decorate([
 ], AuthController.prototype, "verifyOtp", null);
 __decorate([
     (0, public_decorator_1.Public)(),
-    (0, common_1.Post)('resend-otp/:userId'),
+    (0, common_1.Post)('resend-otp'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, swagger_1.ApiOperation)({ summary: 'Resend OTP (rate-limited)' }),
-    __param(0, (0, common_1.Param)('userId')),
+    (0, swagger_1.ApiOperation)({ summary: 'Resend registration OTP using email' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'OTP sent if account is unverified' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Rate limited — wait 60 seconds' }),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [index_1.ResendOtpDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "resendOtp", null);
 __decorate([

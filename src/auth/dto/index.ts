@@ -63,6 +63,13 @@ export class LoginDto {
   password!: string;
 }
 
+
+
+export class ResendOtpDto {
+  @ApiProperty({ example: 'ahmed@email.com' })
+  @IsEmail()
+  email!: string;
+}
 // dto/verify-otp.dto.ts
 export class VerifyOtpDto {
   @ApiProperty({ example: 'usr_01HZ4K...' })

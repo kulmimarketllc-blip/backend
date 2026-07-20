@@ -8,7 +8,7 @@ import {
 import { Response } from 'express';
 
 import { AuthService } from './auth.service';
-import { RegisterDto, RegisterMerchantUserDto } from './dto/index';
+import { RegisterDto, RegisterMerchantUserDto, ResendOtpDto } from './dto/index';
 import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -108,13 +108,16 @@ export class AuthController {
     return { accessToken: result.accessToken, verified: result.verified, user: result.user };
   }
 
+
   // ── POST /auth/resend-otp ────────────────────
   @Public()
-  @Post('resend-otp/:userId')
+  @Post('resend-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Resend OTP (rate-limited)' })
-  async resendOtp(@Param('userId') userId: string) {
-    return this.authService.resendOtp(userId);
+  @ApiOperation({ summary: 'Resend registration OTP using email' })
+  @ApiResponse({ status: 200, description: 'OTP sent if account is unverified' })
+  @ApiResponse({ status: 400, description: 'Rate limited — wait 60 seconds' })
+  async resendOtp(@Body() dto: ResendOtpDto) {
+    return this.authService.resendOtpByEmail(dto.email);
   }
 
   // ── POST /auth/forgot-password ───────────────

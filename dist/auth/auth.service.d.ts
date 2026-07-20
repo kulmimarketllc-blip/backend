@@ -47,6 +47,9 @@ export declare class AuthService {
     requestPasswordReset(email: string): Promise<{
         message: string;
     }>;
+    resendOtpByEmail(email: string): Promise<{
+        message: string;
+    }>;
     resetPassword(dto: ResetPasswordDto): Promise<{
         message: string;
     }>;

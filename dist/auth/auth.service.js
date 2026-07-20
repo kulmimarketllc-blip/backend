@@ -222,6 +222,31 @@ let AuthService = AuthService_1 = class AuthService {
         this.logger.log(`Password reset OTP issued for ${user.email}`);
         return genericResponse;
     }
+    async resendOtpByEmail(email) {
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const genericResponse = {
+            message: 'If an unverified account exists with this email, a new OTP has been sent.',
+        };
+        if (!normalizedEmail) {
+            return genericResponse;
+        }
+        const user = await this.usersRepo.findOne({
+            where: { email: normalizedEmail },
+            select: ['id', 'email', 'phone', 'isVerified', 'provider'],
+        });
+        if (!user || user.isVerified || user.provider !== user_entity_1.AuthProvider.LOCAL) {
+            return genericResponse;
+        }
+        const rateLimitKey = `otp:resend:${user.id}`;
+        const recentlySent = await this.cache.get(rateLimitKey);
+        if (recentlySent) {
+            throw new common_1.BadRequestException('Please wait 60 seconds before requesting another OTP');
+        }
+        await this.sendOtp(user.id, user.email, user.phone);
+        await this.cache.set(rateLimitKey, '1', 60 * 1000);
+        this.logger.log(`Registration OTP resent for ${user.email}`);
+        return { message: 'OTP resent to your email and phone' };
+    }
     async resetPassword(dto) {
         const normalizedEmail = String(dto.email || '').trim().toLowerCase();
         const user = await this.usersRepo.findOne({

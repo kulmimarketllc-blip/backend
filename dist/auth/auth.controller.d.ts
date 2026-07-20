@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthService } from './auth.service';
-import { RegisterDto, RegisterMerchantUserDto } from './dto/index';
+import { RegisterDto, RegisterMerchantUserDto, ResendOtpDto } from './dto/index';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -31,7 +31,7 @@ export declare class AuthController {
         verified: boolean;
         user: any;
     }>;
-    resendOtp(userId: string): Promise<{
+    resendOtp(dto: ResendOtpDto): Promise<{
         message: string;
     }>;
     forgotPassword(dto: ForgotPasswordDto): Promise<{
