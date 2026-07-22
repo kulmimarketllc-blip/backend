@@ -18,8 +18,13 @@ export declare class LoginDto {
     email: string;
     password: string;
 }
+export declare enum OtpType {
+    REGISTER = "register",
+    RESET_PASSWORD = "reset_password"
+}
 export declare class ResendOtpDto {
     email: string;
+    type?: OtpType;
 }
 export declare class VerifyOtpDto {
     userId: string;

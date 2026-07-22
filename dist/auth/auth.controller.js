@@ -68,7 +68,7 @@ let AuthController = class AuthController {
         return { accessToken: result.accessToken, verified: result.verified, user: result.user };
     }
     async resendOtp(dto) {
-        return this.authService.resendOtpByEmail(dto.email);
+        return this.authService.resendOtp(dto.email, dto.type);
     }
     async forgotPassword(dto) {
         return this.authService.requestPasswordReset(dto.email);
@@ -186,8 +186,8 @@ __decorate([
     (0, public_decorator_1.Public)(),
     (0, common_1.Post)('resend-otp'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, swagger_1.ApiOperation)({ summary: 'Resend registration OTP using email' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'OTP sent if account is unverified' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Resend OTP for register or forgot password' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'OTP resent successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Rate limited — wait 60 seconds' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),

@@ -13,10 +13,14 @@ export declare class AuthController {
     register(dto: RegisterDto): Promise<{
         message: string;
         userId: string;
+        email: string;
+        type: import("./dto/index").OtpType;
     }>;
     registerMerchant(dto: RegisterMerchantUserDto): Promise<{
         message: string;
         userId: string;
+        email: string;
+        type: import("./dto/index").OtpType;
     }>;
     login(user: User, res: Response): Promise<{
         accessToken: string;
@@ -33,9 +37,13 @@ export declare class AuthController {
     }>;
     resendOtp(dto: ResendOtpDto): Promise<{
         message: string;
+        email: string;
+        type: import("./dto/index").OtpType;
     }>;
     forgotPassword(dto: ForgotPasswordDto): Promise<{
         message: string;
+        email: string;
+        type: import("./dto/index").OtpType;
     }>;
     resetPassword(dto: ResetPasswordDto): Promise<{
         message: string;

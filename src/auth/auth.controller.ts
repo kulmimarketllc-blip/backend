@@ -113,11 +113,11 @@ export class AuthController {
   @Public()
   @Post('resend-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Resend registration OTP using email' })
-  @ApiResponse({ status: 200, description: 'OTP sent if account is unverified' })
+  @ApiOperation({ summary: 'Resend OTP for register or forgot password' })
+  @ApiResponse({ status: 200, description: 'OTP resent successfully' })
   @ApiResponse({ status: 400, description: 'Rate limited — wait 60 seconds' })
   async resendOtp(@Body() dto: ResendOtpDto) {
-    return this.authService.resendOtpByEmail(dto.email);
+    return this.authService.resendOtp(dto.email, dto.type);
   }
 
   // ── POST /auth/forgot-password ───────────────

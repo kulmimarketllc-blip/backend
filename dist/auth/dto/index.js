@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ResetPasswordDto = exports.ForgotPasswordDto = exports.RefreshTokenDto = exports.VerifyOtpDto = exports.ResendOtpDto = exports.LoginDto = exports.RegisterMerchantUserDto = exports.RegisterDto = void 0;
+exports.ResetPasswordDto = exports.ForgotPasswordDto = exports.RefreshTokenDto = exports.VerifyOtpDto = exports.ResendOtpDto = exports.OtpType = exports.LoginDto = exports.RegisterMerchantUserDto = exports.RegisterDto = void 0;
 const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
 const user_entity_1 = require("../../database/entities/user.entity");
@@ -100,6 +100,11 @@ __decorate([
     (0, class_validator_1.MinLength)(1),
     __metadata("design:type", String)
 ], LoginDto.prototype, "password", void 0);
+var OtpType;
+(function (OtpType) {
+    OtpType["REGISTER"] = "register";
+    OtpType["RESET_PASSWORD"] = "reset_password";
+})(OtpType || (exports.OtpType = OtpType = {}));
 class ResendOtpDto {
 }
 exports.ResendOtpDto = ResendOtpDto;
@@ -108,6 +113,17 @@ __decorate([
     (0, class_validator_1.IsEmail)(),
     __metadata("design:type", String)
 ], ResendOtpDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        enum: OtpType,
+        example: OtpType.REGISTER,
+        description: 'Optional. register = account verification, reset_password = forgot password. ' +
+            'If omitted: unverified account → register, verified account → reset_password.',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(OtpType),
+    __metadata("design:type", String)
+], ResendOtpDto.prototype, "type", void 0);
 class VerifyOtpDto {
 }
 exports.VerifyOtpDto = VerifyOtpDto;

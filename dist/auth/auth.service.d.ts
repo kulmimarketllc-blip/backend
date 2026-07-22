@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
 import { User } from '../database/entities/user.entity';
-import { RegisterDto, RegisterMerchantUserDto } from './dto/index';
+import { OtpType, RegisterDto, RegisterMerchantUserDto } from './dto/index';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -21,13 +21,20 @@ export declare class AuthService {
     private readonly RESET_PASSWORD_OTP_PREFIX;
     private readonly BLACKLIST_PREFIX;
     constructor(usersRepo: Repository<User>, jwtService: JwtService, config: ConfigService, notifications: NotificationsService, merchantsService: MerchantsService, cache: Cache);
+    private normalizeEmail;
+    private findUserByEmail;
+    private checkRateLimit;
     register(dto: RegisterDto): Promise<{
         message: string;
         userId: string;
+        email: string;
+        type: OtpType;
     }>;
     registerMerchant(dto: RegisterMerchantUserDto): Promise<{
         message: string;
         userId: string;
+        email: string;
+        type: OtpType;
     }>;
     validateUser(email: string, password: string): Promise<User>;
     login(user: User): Promise<{
@@ -41,14 +48,17 @@ export declare class AuthService {
         accessToken: string;
         refreshToken: string;
     }>;
-    resendOtp(userId: string): Promise<{
+    resendOtp(email: string, type?: OtpType): Promise<{
         message: string;
+        email: string;
+        type: OtpType;
     }>;
+    private resendRegistrationOtp;
+    private resendPasswordResetOtp;
     requestPasswordReset(email: string): Promise<{
         message: string;
-    }>;
-    resendOtpByEmail(email: string): Promise<{
-        message: string;
+        email: string;
+        type: OtpType;
     }>;
     resetPassword(dto: ResetPasswordDto): Promise<{
         message: string;
@@ -73,6 +83,7 @@ export declare class AuthService {
     }>;
     private generateTokens;
     private sendOtp;
+    private issuePasswordResetOtp;
     private getPasswordResetOtpTtlMs;
     private generateOtp;
     private sanitizeUser;

@@ -56,6 +56,7 @@ const cache_manager_1 = require("@nestjs/cache-manager");
 const common_2 = require("@nestjs/common");
 const bcrypt = __importStar(require("bcrypt"));
 const user_entity_1 = require("../database/entities/user.entity");
+const index_1 = require("./dto/index");
 const notifications_service_1 = require("../notifications/notifications.service");
 const merchants_service_1 = require("../merchants/merchants.service");
 const notification_entity_1 = require("../database/entities/notification.entity");
@@ -73,6 +74,25 @@ let AuthService = AuthService_1 = class AuthService {
         this.OTP_PREFIX = 'otp:';
         this.RESET_PASSWORD_OTP_PREFIX = 'pwd-reset:otp:';
         this.BLACKLIST_PREFIX = 'blacklist:refresh:';
+    }
+    normalizeEmail(email) {
+        return String(email || '').trim().toLowerCase();
+    }
+    async findUserByEmail(email) {
+        const normalizedEmail = this.normalizeEmail(email);
+        if (!normalizedEmail)
+            return null;
+        return this.usersRepo
+            .createQueryBuilder('user')
+            .where('LOWER(user.email) = :email', { email: normalizedEmail })
+            .getOne();
+    }
+    async checkRateLimit(key, seconds = 60) {
+        const blocked = await this.cache.get(key);
+        if (blocked) {
+            throw new common_1.BadRequestException(`Please wait ${seconds} seconds before requesting another OTP`);
+        }
+        await this.cache.set(key, '1', seconds * 1000);
     }
     async register(dto) {
         const existing = await this.usersRepo.findOne({
@@ -97,7 +117,12 @@ let AuthService = AuthService_1 = class AuthService {
         await this.usersRepo.save(user);
         await this.sendOtp(user.id, user.email, user.phone);
         this.logger.log(`New user registered: ${user.email} [${user.role}]`);
-        return { message: 'OTP sent to email and phone', userId: user.id };
+        return {
+            message: 'OTP sent to email and phone',
+            userId: user.id,
+            email: user.email,
+            type: index_1.OtpType.REGISTER,
+        };
     }
     async registerMerchant(dto) {
         const existing = await this.usersRepo.findOne({
@@ -132,7 +157,12 @@ let AuthService = AuthService_1 = class AuthService {
         await this.sendOtp(savedUser.id, savedUser.email, savedUser.phone);
         await this.notifications.notifySubAdmins('🆕 New Merchant Application', `A new merchant store "${dto.storeName}" has registered and is awaiting approval.`, notification_entity_1.NotificationType.SYSTEM, `/subadmin/merchant-approvals`);
         this.logger.log(`New merchant registered: ${savedUser.email} (Store: ${dto.storeName})`);
-        return { message: 'Merchant registered. Please verify your account with the OTP sent.', userId: savedUser.id };
+        return {
+            message: 'Merchant registered. Please verify your account with the OTP sent.',
+            userId: savedUser.id,
+            email: savedUser.email,
+            type: index_1.OtpType.REGISTER,
+        };
     }
     async validateUser(email, password) {
         const user = await this.usersRepo.findOne({
@@ -158,6 +188,7 @@ let AuthService = AuthService_1 = class AuthService {
                 requiresOtp: true,
                 userId: user.id,
                 email: user.email,
+                type: index_1.OtpType.REGISTER,
             });
         }
         const tokens = await this.generateTokens(user);
@@ -192,78 +223,100 @@ let AuthService = AuthService_1 = class AuthService {
         this.logger.log(`User verified: ${user.email}`);
         return { ...tokens, verified: true, user: this.sanitizeUser(user) };
     }
-    async resendOtp(userId) {
-        const user = await this.usersRepo.findOneByOrFail({ id: userId });
-        if (user.isVerified)
-            throw new common_1.BadRequestException('Already verified');
+    async resendOtp(email, type) {
+        const normalizedEmail = this.normalizeEmail(email);
+        if (!normalizedEmail) {
+            throw new common_1.BadRequestException('Email is required');
+        }
+        const user = await this.findUserByEmail(normalizedEmail);
+        if (!user) {
+            throw new common_1.BadRequestException('No account found with this email');
+        }
+        const effectiveType = type ?? (user.isVerified ? index_1.OtpType.RESET_PASSWORD : index_1.OtpType.REGISTER);
+        if (type === index_1.OtpType.REGISTER && user.isVerified) {
+            throw new common_1.BadRequestException('Account is already verified. Use type "reset_password" for password reset OTP.');
+        }
+        if (type === index_1.OtpType.RESET_PASSWORD && !user.isVerified) {
+            throw new common_1.BadRequestException('Account is not verified yet. Use type "register" for verification OTP.');
+        }
+        if (effectiveType === index_1.OtpType.REGISTER) {
+            return this.resendRegistrationOtp(user);
+        }
+        return this.resendPasswordResetOtp(user);
+    }
+    async resendRegistrationOtp(user) {
+        if (user.provider !== user_entity_1.AuthProvider.LOCAL) {
+            throw new common_1.BadRequestException('This account uses social login.');
+        }
+        await this.checkRateLimit(`otp:resend:register:${user.id}`);
         await this.sendOtp(user.id, user.email, user.phone);
-        return { message: 'OTP resent' };
+        this.logger.log(`Registration OTP resent for ${user.email}`);
+        return {
+            message: 'Verification OTP resent to your email and phone',
+            userId: user.id,
+            email: user.email,
+            type: index_1.OtpType.REGISTER,
+        };
+    }
+    async resendPasswordResetOtp(user) {
+        if (!user.isActive) {
+            throw new common_1.BadRequestException('Account is deactivated');
+        }
+        if (!user.passwordHash || user.provider !== user_entity_1.AuthProvider.LOCAL) {
+            throw new common_1.BadRequestException('Password reset is not available for this account');
+        }
+        await this.checkRateLimit(`otp:resend:reset:${user.id}`);
+        await this.issuePasswordResetOtp(user);
+        this.logger.log(`Password reset OTP resent for ${user.email}`);
+        return {
+            message: 'Password reset OTP resent to your email',
+            email: user.email,
+            type: index_1.OtpType.RESET_PASSWORD,
+        };
     }
     async requestPasswordReset(email) {
-        const normalizedEmail = String(email || '').trim().toLowerCase();
-        const genericResponse = {
+        const normalizedEmail = this.normalizeEmail(email);
+        const response = {
             message: 'If an account exists with this email, a password reset code has been sent.',
+            email: normalizedEmail,
+            type: index_1.OtpType.RESET_PASSWORD,
         };
         if (!normalizedEmail) {
-            return genericResponse;
+            return response;
         }
-        const user = await this.usersRepo.findOne({
-            where: { email: normalizedEmail },
-            select: ['id', 'email', 'isActive', 'passwordHash', 'provider'],
-        });
+        const user = await this.findUserByEmail(normalizedEmail);
         if (!user || !user.isActive || !user.passwordHash || user.provider !== user_entity_1.AuthProvider.LOCAL) {
-            return genericResponse;
+            return response;
         }
-        const otp = this.generateOtp();
-        const otpHash = await bcrypt.hash(otp, 10);
-        const ttlMs = this.getPasswordResetOtpTtlMs();
-        await this.cache.set(`${this.RESET_PASSWORD_OTP_PREFIX}${user.id}`, otpHash, ttlMs);
-        await this.notifications.sendPasswordResetOtpEmail(user.email, otp, Math.round(ttlMs / 60000));
+        try {
+            await this.checkRateLimit(`otp:resend:reset:${user.id}`);
+        }
+        catch {
+            throw new common_1.BadRequestException('Please wait 60 seconds before requesting another code');
+        }
+        await this.issuePasswordResetOtp(user);
         this.logger.log(`Password reset OTP issued for ${user.email}`);
-        return genericResponse;
-    }
-    async resendOtpByEmail(email) {
-        const normalizedEmail = String(email || '').trim().toLowerCase();
-        const genericResponse = {
-            message: 'If an unverified account exists with this email, a new OTP has been sent.',
-        };
-        if (!normalizedEmail) {
-            return genericResponse;
-        }
-        const user = await this.usersRepo.findOne({
-            where: { email: normalizedEmail },
-            select: ['id', 'email', 'phone', 'isVerified', 'provider'],
-        });
-        if (!user || user.isVerified || user.provider !== user_entity_1.AuthProvider.LOCAL) {
-            return genericResponse;
-        }
-        const rateLimitKey = `otp:resend:${user.id}`;
-        const recentlySent = await this.cache.get(rateLimitKey);
-        if (recentlySent) {
-            throw new common_1.BadRequestException('Please wait 60 seconds before requesting another OTP');
-        }
-        await this.sendOtp(user.id, user.email, user.phone);
-        await this.cache.set(rateLimitKey, '1', 60 * 1000);
-        this.logger.log(`Registration OTP resent for ${user.email}`);
-        return { message: 'OTP resent to your email and phone' };
+        return response;
     }
     async resetPassword(dto) {
-        const normalizedEmail = String(dto.email || '').trim().toLowerCase();
-        const user = await this.usersRepo.findOne({
-            where: { email: normalizedEmail },
-            select: ['id', 'email', 'passwordHash', 'isActive', 'provider'],
-        });
+        const normalizedEmail = this.normalizeEmail(dto.email);
+        const user = await this.findUserByEmail(normalizedEmail);
         if (!user || !user.passwordHash || !user.isActive || user.provider !== user_entity_1.AuthProvider.LOCAL) {
             throw new common_1.BadRequestException('Invalid or expired reset code');
         }
         const key = `${this.RESET_PASSWORD_OTP_PREFIX}${user.id}`;
         const storedOtp = await this.cache.get(key);
         if (!storedOtp) {
-            throw new common_1.BadRequestException('Invalid or expired reset code');
+            throw new common_1.BadRequestException({
+                message: 'Reset code expired or not found. Please resend OTP.',
+                code: 'RESET_OTP_EXPIRED',
+                canResend: true,
+                type: index_1.OtpType.RESET_PASSWORD,
+            });
         }
         const validOtp = await bcrypt.compare(dto.otp, storedOtp);
         if (!validOtp) {
-            throw new common_1.BadRequestException('Invalid or expired reset code');
+            throw new common_1.BadRequestException('Invalid reset code');
         }
         const isSamePassword = await bcrypt.compare(dto.newPassword, user.passwordHash);
         if (isSamePassword) {
@@ -344,10 +397,23 @@ let AuthService = AuthService_1 = class AuthService {
         const otpHash = await bcrypt.hash(otp, 10);
         const ttl = this.config.get('OTP_TTL_SECONDS', 600) * 1000;
         await this.cache.set(`${this.OTP_PREFIX}${userId}`, otpHash, ttl);
-        await Promise.allSettled([
+        const [emailResult, smsResult] = await Promise.allSettled([
             this.notifications.sendOtpEmail(email, otp),
             phone ? this.notifications.sendOtpSms(phone, otp) : Promise.resolve(),
         ]);
+        if (emailResult.status === 'rejected') {
+            this.logger.error(`Failed to send OTP email to ${email}: ${emailResult.reason}`);
+        }
+        if (smsResult.status === 'rejected') {
+            this.logger.error(`Failed to send OTP SMS to ${phone}: ${smsResult.reason}`);
+        }
+    }
+    async issuePasswordResetOtp(user) {
+        const otp = this.generateOtp();
+        const otpHash = await bcrypt.hash(otp, 10);
+        const ttlMs = this.getPasswordResetOtpTtlMs();
+        await this.cache.set(`${this.RESET_PASSWORD_OTP_PREFIX}${user.id}`, otpHash, ttlMs);
+        await this.notifications.sendPasswordResetOtpEmail(user.email, otp, Math.round(ttlMs / 60000));
     }
     getPasswordResetOtpTtlMs() {
         const ttlSeconds = this.config.get('RESET_PASSWORD_OTP_TTL_SECONDS', this.config.get('OTP_TTL_SECONDS', 600));

@@ -65,11 +65,28 @@ export class LoginDto {
 
 
 
+export enum OtpType {
+  REGISTER = 'register',
+  RESET_PASSWORD = 'reset_password',
+}
+
 export class ResendOtpDto {
   @ApiProperty({ example: 'ahmed@email.com' })
   @IsEmail()
   email!: string;
+
+  @ApiPropertyOptional({
+    enum: OtpType,
+    example: OtpType.REGISTER,
+    description:
+      'Optional. register = account verification, reset_password = forgot password. ' +
+      'If omitted: unverified account → register, verified account → reset_password.',
+  })
+  @IsOptional()
+  @IsEnum(OtpType)
+  type?: OtpType;
 }
+
 // dto/verify-otp.dto.ts
 export class VerifyOtpDto {
   @ApiProperty({ example: 'usr_01HZ4K...' })
