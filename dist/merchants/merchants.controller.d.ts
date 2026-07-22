@@ -42,7 +42,7 @@ export declare class MerchantsController {
         isOnline: boolean;
     }>;
     getEarnings(user: User, period?: any): Promise<{
-        period: "year" | "week" | "month";
+        period: "week" | "month" | "year";
         summary: any;
         dailyBreakdown: any;
         topProducts: any;

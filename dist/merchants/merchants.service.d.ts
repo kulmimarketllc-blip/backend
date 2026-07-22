@@ -35,7 +35,7 @@ export declare class MerchantsService {
         isOnline: boolean;
     }>;
     getEarnings(merchantId: string, period?: 'week' | 'month' | 'year'): Promise<{
-        period: "year" | "week" | "month";
+        period: "week" | "month" | "year";
         summary: any;
         dailyBreakdown: any;
         topProducts: any;

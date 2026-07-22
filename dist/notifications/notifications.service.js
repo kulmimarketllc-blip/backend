@@ -329,7 +329,7 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
         return `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:2rem;background:#0A0F1E;color:#F8FAFC;border-radius:12px;">
         <div style="font-size:2rem;font-weight:800;margin-bottom:1rem;">ES<span style="color:#00C9A7">UUQ</span></div>
-        <h2 style="margin-bottom:0.5rem;">Verify Your Account</h2>
+        <h2 style="margin-bottom:0.5rem;color:white">Verify Your Account</h2>
         <p style="color:#94A3B8;margin-bottom:1.5rem;">Use the code below to verify your account. It expires in 10 minutes.</p>
         <div style="background:#1E2A3A;padding:1.5rem;border-radius:8px;text-align:center;letter-spacing:0.5em;font-size:2rem;font-weight:700;color:#00C9A7;margin-bottom:1.5rem;">${otp}</div>
         <p style="color:#94A3B8;font-size:0.8rem;">If you didn't request this, you can safely ignore this email.</p>
